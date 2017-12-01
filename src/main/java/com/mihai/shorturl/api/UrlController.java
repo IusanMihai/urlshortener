@@ -24,11 +24,11 @@ public class UrlController {
     }
 
     @PostMapping(
-            path = "/{url}",
+            path = "/",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Shorten a URL")
-    public ResponseEntity<UrlEntity> shortenUrl(@PathVariable("url") String url) {
+    public ResponseEntity<UrlEntity> shortenUrl(@RequestParam(value = "longUrl") String url) {
         logger.debug("Shorten request for: {}", url);
         UrlEntity urlEntity = urlService.create(url);
         logger.debug("Returning url: {}", urlEntity.getHash());
@@ -36,11 +36,11 @@ public class UrlController {
     }
 
     @GetMapping(
-            path = "/{short-url}",
+            path = "/",
             consumes= MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Retrieve a shortened URL")
-    public ResponseEntity<UrlEntity> enlargeUrl(@PathVariable("short-url") String shortUrl) {
+    public ResponseEntity<UrlEntity> enlargeUrl(@RequestParam(value = "shortUrl") String shortUrl) {
         UrlEntity urlEntity = urlService.find(shortUrl);
         return new ResponseEntity<>(urlEntity, HttpStatus.OK);
     }
