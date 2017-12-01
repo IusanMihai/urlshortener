@@ -33,9 +33,10 @@ public class SwaggerConfig {
         return new ApiInfo(
                 "URL shortening REST API",
                 "This API is used for shortening URLs",
-                "API TOS",
+                "1.0",
                 "Terms of service",
                 new Contact("Mihai Iusan", "swagger-ui.html", "mihai.iusan@gmail.com"),
-                "License of API", "https://opensource.org/licenses/MIT");
+                "License of API",
+                "https://opensource.org/licenses/MIT");
     }
 }

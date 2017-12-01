@@ -20,6 +20,7 @@ public class UrlEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @JsonIgnore
     @ApiModelProperty(hidden = true)
     private long id;
 
@@ -39,10 +40,12 @@ public class UrlEntity implements Serializable {
             readOnly = true)
     private String hash;
 
+    @JsonIgnore
     @CreatedDate
     @ApiModelProperty(hidden = true)
     private ZonedDateTime createdDate;
 
+    @JsonIgnore
     @LastModifiedDate
     @ApiModelProperty(hidden = true)
     private ZonedDateTime modifiedDate;
