@@ -1,6 +1,8 @@
 package com.mihai.shorturl.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -10,42 +12,65 @@ import java.io.Serializable;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 
+@ApiModel(description = "URL Entity")
 @Entity
 @EntityListeners({AuditingEntityListener.class})
-@Table(name = "URL")
+@Table(name = "urls")
 public class UrlEntity implements Serializable {
-    @JsonIgnore
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @JsonIgnore
+    @ApiModelProperty(hidden = true)
     private long id;
+
     @Column(name = "url", nullable = false, unique = true)
+    @ApiModelProperty(
+            value = "The full URL",
+            example = "https://duckduckgo.com",
+            required = true,
+            readOnly = true)
     private String url;
+
     @Column(name = "hash", nullable = false, unique = true)
+    @ApiModelProperty(
+            value = "The shortened URL",
+            example = "t15px8",
+            required = true,
+            readOnly = true)
     private String hash;
+
     @JsonIgnore
     @CreatedDate
+    @ApiModelProperty(hidden = true)
     private ZonedDateTime createdDate;
+
     @JsonIgnore
     @LastModifiedDate
+    @ApiModelProperty(hidden = true)
     private ZonedDateTime modifiedDate;
+
     @JsonIgnore
     @Version
     private long version;
 
+    /**
+     * Empty constructor for {@link UrlEntity}.
+     */
     public UrlEntity() {
+        //
     }
 
     public UrlEntity(final String url, final String hash) {
+        Objects.requireNonNull(url);
+        Objects.requireNonNull(hash);
+
         this.hash = hash;
         this.url = url;
     }
 
     public long getId() {
         return this.id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
     }
 
     public String getUrl() {
