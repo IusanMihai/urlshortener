@@ -11,7 +11,7 @@ public interface UrlService {
 
     UrlEntity create(String url);
 
-    String findUrlByHash(String hash);
+    String findUrlByKey(String key);
 
-    void deleteByHash(String hash);
+    void deleteByKey(String key);
 }

@@ -8,7 +8,9 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 
@@ -18,13 +20,17 @@ import java.util.Objects;
 @Table(name = "urls")
 public class UrlEntity implements Serializable {
 
+    public static final int DEFAULT_VALID_DAYS = 7;
+    public static final int MAX_URL_LENGTH = 2084;
+
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @JsonIgnore
     @ApiModelProperty(hidden = true)
     private long id;
 
-    @Column(name = "url", nullable = false, unique = true)
+    @Column(name = "url", nullable = false, unique = true, length = MAX_URL_LENGTH)
     @ApiModelProperty(
             value = "The full URL",
             example = "https://duckduckgo.com",
@@ -32,13 +38,18 @@ public class UrlEntity implements Serializable {
             readOnly = true)
     private String url;
 
-    @Column(name = "hash", nullable = false, unique = true)
+    @Column(name = "key", nullable = false, unique = true)
     @ApiModelProperty(
             value = "The shortened URL",
             example = "t15px8",
             required = true,
             readOnly = true)
-    private String hash;
+    private String key;
+
+    @JsonIgnore
+    @Column(name = "expirationDate", nullable = false)
+    @ApiModelProperty(hidden = true)
+    private LocalDate expirationDate;
 
     @JsonIgnore
     @CreatedDate
@@ -58,15 +69,25 @@ public class UrlEntity implements Serializable {
      * Empty constructor for {@link UrlEntity}.
      */
     public UrlEntity() {
-        //
     }
 
-    public UrlEntity(final String url, final String hash) {
+    public UrlEntity(@NotNull final String url, @NotNull final String key) {
         Objects.requireNonNull(url);
-        Objects.requireNonNull(hash);
+        Objects.requireNonNull(key);
 
-        this.hash = hash;
+        this.key = key;
         this.url = url;
+        this.expirationDate = LocalDate.now().plusDays(DEFAULT_VALID_DAYS);
+    }
+
+    public UrlEntity(@NotNull final String url, @NotNull final String key, @NotNull final LocalDate expirationDate) {
+        Objects.requireNonNull(url);
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(expirationDate);
+
+        this.key = key;
+        this.url = url;
+        this.expirationDate = expirationDate;
     }
 
     public long getId() {
@@ -81,12 +102,12 @@ public class UrlEntity implements Serializable {
         this.url = url;
     }
 
-    public String getHash() {
-        return this.hash;
+    public String getKey() {
+        return this.key;
     }
 
-    public void setHash(String hash) {
-        this.hash = hash;
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public ZonedDateTime getCreatedDate() {
@@ -109,9 +130,17 @@ public class UrlEntity implements Serializable {
         return this.version;
     }
 
+    public LocalDate getExpirationDate() {
+        return expirationDate;
+    }
+
+    public void setExpirationDate(LocalDate expirationDate) {
+        this.expirationDate = expirationDate;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(this.id, this.url, this.hash);
+        return Objects.hash(this.id, this.url, this.key);
     }
 
     @Override
@@ -123,7 +152,7 @@ public class UrlEntity implements Serializable {
             return false;
         }
         final UrlEntity other = (UrlEntity) obj;
-        return Objects.equals(this.id, other.id) && Objects.equals(this.url, other.url) && Objects.equals(this.hash, other.hash);
+        return Objects.equals(this.id, other.id) && Objects.equals(this.url, other.url) && Objects.equals(this.key, other.key);
     }
 
     @Override
@@ -131,8 +160,10 @@ public class UrlEntity implements Serializable {
         return "UrlEntity { " +
                 "id=" + Objects.toString(this.id) +
                 ", url='" + Objects.toString(this.url) +
-                ", hash='" + Objects.toString(this.hash) +
+                ", key='" + Objects.toString(this.key) +
                 ", createdDate=" + Objects.toString(this.createdDate) +
                 ", modifiedDate=" + Objects.toString(this.modifiedDate) + '}';
     }
+
+
 }

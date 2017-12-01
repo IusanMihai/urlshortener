@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UrlRepository extends JpaRepository<UrlEntity, Long> {
 
-    UrlEntity findByHash(String hash);
+    UrlEntity findByKey(String key);
 
     UrlEntity findByUrl(String url);
 

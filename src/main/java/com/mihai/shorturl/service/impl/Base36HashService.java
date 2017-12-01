@@ -1,13 +1,13 @@
 package com.mihai.shorturl.service.impl;
 
-import com.mihai.shorturl.service.HashService;
+import com.mihai.shorturl.service.KeyService;
 import com.mihai.shorturl.service.SupportedProtocol;
 import com.mihai.shorturl.service.exception.InvalidURLException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
-public class Base36HashService implements HashService {
+public class Base36HashService implements KeyService {
     private static final int RADIX = 36;
     private static final String PIPE = "-";
 

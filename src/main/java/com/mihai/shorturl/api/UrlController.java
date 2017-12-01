@@ -28,10 +28,10 @@ public class UrlController {
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Shorten a URL")
-    public ResponseEntity<UrlEntity> shortenUrl(@RequestParam(value = "longUrl") String url) {
+    public ResponseEntity<UrlEntity> shortenUrl(@RequestParam(value = "longUrl", defaultValue = "https://www.google.com/") String url) {
         logger.debug("Shorten request for: {}", url);
         UrlEntity urlEntity = urlService.create(url);
-        logger.debug("Returning url: {}", urlEntity.getHash());
+        logger.debug("Returning url: {}", urlEntity.getKey());
         return new ResponseEntity<>(urlEntity, HttpStatus.OK);
     }
 
@@ -40,7 +40,7 @@ public class UrlController {
             consumes= MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Retrieve a shortened URL")
-    public ResponseEntity<UrlEntity> enlargeUrl(@RequestParam(value = "shortUrl") String shortUrl) {
+    public ResponseEntity<UrlEntity> enlargeUrl(@RequestParam(value = "shortUrl", defaultValue = "ffxgil") String shortUrl) {
         UrlEntity urlEntity = urlService.find(shortUrl);
         return new ResponseEntity<>(urlEntity, HttpStatus.OK);
     }

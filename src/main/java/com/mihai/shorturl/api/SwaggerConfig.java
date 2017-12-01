@@ -36,7 +36,6 @@ public class SwaggerConfig {
                 "1.0",
                 "Terms of service",
                 new Contact("Mihai Iusan", "swagger-ui.html", "mihai.iusan@gmail.com"),
-                "License of API",
-                "https://opensource.org/licenses/MIT");
+                "License of API", "https://opensource.org/licenses/MIT");
     }
 }
