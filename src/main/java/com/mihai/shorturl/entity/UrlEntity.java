@@ -51,6 +51,13 @@ public class UrlEntity implements Serializable {
     @Version
     private long version;
 
+    /**
+     * Empty constructor for {@link UrlEntity}.
+     */
+    public UrlEntity() {
+        //
+    }
+
     public UrlEntity(final String url, final String hash) {
         Objects.requireNonNull(url);
         Objects.requireNonNull(hash);
