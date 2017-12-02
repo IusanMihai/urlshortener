@@ -77,7 +77,7 @@ public class UrlEntity implements Serializable {
 
         this.key = key;
         this.url = url;
-        this.expirationDate = LocalDate.now().plusDays(DEFAULT_VALID_DAYS);
+        this.expirationDate = getDefaultExpirationDate();
     }
 
     public UrlEntity(@NotNull final String url, @NotNull final String key, @NotNull final LocalDate expirationDate) {
@@ -88,6 +88,10 @@ public class UrlEntity implements Serializable {
         this.key = key;
         this.url = url;
         this.expirationDate = expirationDate;
+    }
+
+    public static LocalDate getDefaultExpirationDate() {
+        return LocalDate.now().plusDays(DEFAULT_VALID_DAYS);
     }
 
     public long getId() {

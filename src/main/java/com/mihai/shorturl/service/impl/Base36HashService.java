@@ -21,17 +21,12 @@ public class Base36HashService implements KeyService {
             throw new InvalidURLException("Supplied invalid url: empty");
         }
 
-        boolean isSupportedProtocol = SupportedProtocol.contains(url);
-        if (!isSupportedProtocol) {
-            throw new InvalidURLException("URL protocol not supported");
-        }
-
         String hexValue = Integer.toString(url.hashCode(), RADIX);
         if (hexValue.startsWith(PIPE)) {
             hexValue = hexValue.substring(1);
         }
 
-        // TODO: Implement database check to prevent collisions
+
         return hexValue;
     }
 

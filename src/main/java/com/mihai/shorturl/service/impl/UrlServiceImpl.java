@@ -3,9 +3,11 @@ package com.mihai.shorturl.service.impl;
 import com.mihai.shorturl.entity.UrlEntity;
 import com.mihai.shorturl.repository.UrlRepository;
 import com.mihai.shorturl.service.KeyService;
+import com.mihai.shorturl.service.SupportedProtocol;
 import com.mihai.shorturl.service.UrlService;
 import com.mihai.shorturl.service.exception.InvalidURLException;
 import com.mihai.shorturl.service.exception.UrlNotFoundException;
+import com.mihai.shorturl.service.exception.UrlNotSavedException;
 import com.mihai.shorturl.service.verifier.UrlVerifiers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +22,14 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * This is the URL service which is responsible to create save and find entities from the UrlRepository
+ *
+ * @author Mihai Iusan
+ */
 @Service
 public class UrlServiceImpl implements UrlService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(UrlServiceImpl.class);
-    //private static final String URL_ENCODE_REGEX = "[a-zA-Z0-9_~-]+$";
+    private static final Logger logger = LoggerFactory.getLogger(UrlServiceImpl.class);
     private UrlRepository urlRepository;
     private KeyService shortenService;
     private UrlVerifiers verifiers;
@@ -35,6 +41,13 @@ public class UrlServiceImpl implements UrlService {
         this.verifiers = verifiers;
     }
 
+    /**
+     * Gets all the items from database base on the offset and the limit
+     *
+     * @param offset the offset
+     * @param limit  the limit
+     * @return the list of UrlEntities
+     */
     @Override
     @Transactional(readOnly = true)
     public List<UrlEntity> find(int offset, int limit) {
@@ -42,34 +55,57 @@ public class UrlServiceImpl implements UrlService {
         Pageable pageRequest = new PageRequest(page, limit);
         Page<UrlEntity> foundUrls = urlRepository.findAll(pageRequest);
 
-        LOGGER.debug("Found {} URLs", foundUrls.getTotalElements());
+        logger.debug("Found {} URLs", foundUrls.getTotalElements());
         return foundUrls.getContent();
     }
 
+    /**
+     * Find UrlEntity by key
+     *
+     * @param key the key
+     * @return the URL entity
+     */
     @Override
     @Transactional(readOnly = true)
-    public UrlEntity find(String shortUrl) {
-        UrlEntity foundUrl = urlRepository.findByKey(shortUrl);
+    public UrlEntity find(String key) {
+        UrlEntity foundUrl = urlRepository.findByKey(key);
         if (foundUrl == null || isUrlExpired(foundUrl)) {
-            throw new UrlNotFoundException("URL \'" + shortUrl + "\' not found");
+            throw new UrlNotFoundException("URL \'" + key + "\' not found");
         }
         return foundUrl;
     }
 
+    /**
+     * Create a new URL entry in the db.
+     * <p>
+     * Note: If it already exists, it will retrieve the old one and update the expiry date if needed
+     * Note: If
+     *
+     * @param url the url
+     * @return new UrlEntity
+     */
     @Override
     @Transactional
     public UrlEntity create(@NotNull String url) {
-        LOGGER.debug("Request to shortenUrl: {}", url);
+        logger.debug("Request to shortenUrl: {}", url);
         UrlEntity resultUrl;
 
         String newUrl = url.trim();
+        // Check if the URL is longer then the max size that can be saved to DB
+        if (newUrl.length() > UrlEntity.MAX_URL_LENGTH) {
+            throw new InvalidURLException("URL is too long, max supported size is: " + UrlEntity.MAX_URL_LENGTH);
+        }
 
+        // Check if the protocol is supported
+        boolean isSupportedProtocol = SupportedProtocol.contains(url);
+        if (!isSupportedProtocol) {
+            throw new InvalidURLException("URL protocol not supported");
+        }
         boolean isSafeUrl = verifiers.isSafe(newUrl);
         if (isSafeUrl) {
             UrlEntity existingUrl = urlRepository.findByUrl(newUrl);
-
             if (existingUrl != null) {
-                LOGGER.debug("URL {} already exists in database: {}", newUrl, existingUrl);
+                logger.debug("URL {} already exists in database: {}", newUrl, existingUrl);
                 LocalDate validityPeriod = LocalDate.now().plusDays(UrlEntity.DEFAULT_VALID_DAYS);
                 LocalDate expirationDate = existingUrl.getExpirationDate();
                 if (validityPeriod.isAfter(expirationDate)) {
@@ -77,7 +113,6 @@ public class UrlServiceImpl implements UrlService {
                 }
                 resultUrl = existingUrl;
             } else {
-                //TODO check if there is an expired URL, if there is, overwrite the row with new values
                 resultUrl = createAndSaveUrl(newUrl);
             }
             return resultUrl;
@@ -86,10 +121,16 @@ public class UrlServiceImpl implements UrlService {
         }
     }
 
+    /**
+     * Delete operation by key for the URL entry
+     *
+     * @param key the key
+     */
     @Override
     @Transactional
     public void deleteByKey(String key) {
-        LOGGER.info("Delete request for url with key: ", key);
+        // Not in use
+        logger.info("Delete request for url with key: ", key);
 
         UrlEntity foundUrl = urlRepository.findByKey(key);
         if (foundUrl == null) {
@@ -97,31 +138,85 @@ public class UrlServiceImpl implements UrlService {
         }
 
         urlRepository.delete(foundUrl);
-        LOGGER.info("Deleted: {}", foundUrl);
+        logger.info("Deleted: {}", foundUrl);
     }
 
+    /**
+     * Find a URL by key
+     *
+     * @param key the key
+     * @return the found URL or NULL
+     */
     @Override
     public String findUrlByKey(String key) {
-        String url = null;
+        logger.trace("Retrieving url for the key: ", key);
 
-        LOGGER.trace("Retrieving url for the key: ", key);
+        String result = null;
         UrlEntity foundUrl = urlRepository.findByKey(key);
-        if (foundUrl == null) {
-            LOGGER.info("No url found for key: {}", key);
+
+        if (foundUrl != null && !isUrlExpired(foundUrl)) {
+            logger.debug("Found url corresponding to the key: {} is {}", foundUrl);
+            result = foundUrl.getUrl();
         } else {
-            LOGGER.debug("Found url corresponding to the key: {} is {}", foundUrl);
-            url = foundUrl.getUrl();
+            logger.info("No url found for key: {}", key);
         }
 
-        return url;
+        return result;
     }
 
+    /**
+     * Creates and saves a new URL entry
+     * <p>
+     * Note: If there is an expired entry in db, it will be overwritten with the new URL. This is done to reuse rows
+     *
+     * @param url the url to save
+     * @return the saved entry
+     */
     private UrlEntity createAndSaveUrl(@NotNull String url) {
-        final String key = shortenService.shorten(url);
-        UrlEntity savedUrl = urlRepository.save(new UrlEntity(url, key));
+        UrlEntity urlToSave;
 
-        LOGGER.debug("Successfully created new url: {}", savedUrl);
+        // Get entries that expired and overwrite the entry in the database
+        UrlEntity foundUrl = urlRepository.findFirstByExpirationDateBefore(LocalDate.now());
+        if (foundUrl != null) {
+            foundUrl.setUrl(url);
+            foundUrl.setExpirationDate(UrlEntity.getDefaultExpirationDate());
+            urlToSave = foundUrl;
+        } else {
+            String key = getKey(url);
+
+            urlToSave = new UrlEntity(url, key);
+        }
+        UrlEntity savedUrl = urlRepository.save(urlToSave);
+
+        logger.debug("Successfully created new url: {}", savedUrl);
         return savedUrl;
+    }
+
+    /**
+     * Get unique key to store for the url
+     * <p>
+     * Note: if there is a database collision with the key, it will try to generate a new one
+     * Note: if it cannot generate the key in max 10 tries, it will throw an exception
+     *
+     * @param url the url to shorten
+     * @return the url key
+     */
+    private String getKey(String url) {
+        // shorten the url
+        String key = shortenService.shorten(url);
+
+        // Do database check to prevent key collisions
+        // while key exists in the database, generate a new key by adding extra empty spaces at the end to the url
+        int maxTries = 10;
+        while (urlRepository.findByKey(key) != null) {
+            logger.debug("key {} already exists in database, generating a new one", key);
+            maxTries--;
+            url = url.concat(" ");
+            key = shortenService.shorten(url);
+            if (maxTries <= 10)
+                throw new UrlNotSavedException("Could not save the URL");
+        }
+        return key;
     }
 
     /**
@@ -135,7 +230,7 @@ public class UrlServiceImpl implements UrlService {
         urlEntity.setExpirationDate(expirationDate);
         UrlEntity savedUrl = urlRepository.save(urlEntity);
 
-        LOGGER.debug("Successfully updated expiration date for url: {}", savedUrl);
+        logger.debug("Successfully updated expiration date for url: {}", savedUrl);
         return savedUrl;
     }
 
